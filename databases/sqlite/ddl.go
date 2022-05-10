@@ -1,6 +1,6 @@
 package sqlite
 
-func (db *PostgreSQL) CreateSchema() error {
+func (db *SQLite) CreateSchema() error {
 
 	tables := []string{`
 drop table if exists warehouse;
@@ -150,7 +150,7 @@ PRIMARY KEY(s_w_id, s_i_id) ) ;
 	return nil
 }
 
-func (db *PostgreSQL) CreateIndexes() error {
+func (db *SQLite) CreateIndexes() error {
 
 	queries := []string {
 		"CREATE INDEX idx_customer ON customer (c_w_id,c_d_id,c_last,c_first);",
