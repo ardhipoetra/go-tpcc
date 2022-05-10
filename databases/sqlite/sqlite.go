@@ -192,9 +192,9 @@ func (db *SQLite) GetNewOrder(warehouseId int, districtId int) (*models.NewOrder
 
 	var query string
 	if db.transactions {
-		query = "SELECT NO_O_ID FROM NEW_ORDER WHERE NO_D_ID = ? AND NO_W_ID = ? ORDER BY NO_O_ID ASC LIMIT 1 FOR UPDATE"
+		query = "SELECT NO_O_ID FROM NEW_ORDERS WHERE NO_D_ID = ? AND NO_W_ID = ? ORDER BY NO_O_ID ASC LIMIT 1 FOR UPDATE"
 	} else {
-		query = "SELECT NO_O_ID FROM NEW_ORDER WHERE NO_D_ID = ? AND NO_W_ID = ? ORDER BY NO_O_ID ASC LIMIT 1"
+		query = "SELECT NO_O_ID FROM NEW_ORDERS WHERE NO_D_ID = ? AND NO_W_ID = ? ORDER BY NO_O_ID ASC LIMIT 1"
 	}
 	r := db.queryRow(query, districtId, warehouseId)
 
@@ -210,7 +210,7 @@ func (db *SQLite) GetNewOrder(warehouseId int, districtId int) (*models.NewOrder
 
 func (db *SQLite) DeleteNewOrder(orderId int, warehouseId int, districtId int) error {
 
-	query := "DELETE FROM NEW_ORDER WHERE NO_O_ID = ? AND NO_D_ID = ? AND NO_W_ID = ?"
+	query := "DELETE FROM NEW_ORDERS WHERE NO_O_ID = ? AND NO_D_ID = ? AND NO_W_ID = ?"
 	r, err := db.exec(query, orderId, districtId, warehouseId)
 
 	if err != nil {
@@ -608,7 +608,7 @@ func (db *SQLite) CreateOrder(
 		return err
 	}
 
-	query = "INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES (?, ?, ?)"
+	query = "INSERT INTO NEW_ORDERS (NO_O_ID, NO_D_ID, NO_W_ID) VALUES (?, ?, ?)"
 	_,err = db.exec(query, orderId, districtId, warehouseId)
 	if err != nil {
 		return err

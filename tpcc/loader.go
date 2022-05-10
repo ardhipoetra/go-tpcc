@@ -6,7 +6,7 @@ import (
 
 //
 // @TODO@
-// 
+//
 // This is taken directly from the py-tpcc benchmark
 // and should be refactored later.
 //
@@ -48,7 +48,7 @@ const (
 
 	//  District constants
 	DISTRICTS_PER_WAREHOUSE = 10
-	INITIAL_D_YTD = 30000.00  
+	INITIAL_D_YTD = 30000.00
 	INITIAL_NEXT_O_ID = 3001
 
 	// Customer constants
@@ -117,7 +117,7 @@ const (
 	TABLENAME_CUSTOMER   = "CUSTOMER"
 	TABLENAME_STOCK      = "STOCK"
 	TABLENAME_ORDERS     = "ORDERS"
-	TABLENAME_NEW_ORDER  = "NEW_ORDER"
+	TABLENAME_NEW_ORDER  = "NEW_ORDERS"
 	TABLENAME_ORDER_LINE = "ORDER_LINE"
 	TABLENAME_HISTORY    = "HISTORY"
 )
@@ -145,4 +145,3 @@ func (w *Worker) generateRandomAddress() Address {
 		zip:      helpers.RandNumericString(zipLength) + ZIP_SUFFIX,
 	}
 }
-
