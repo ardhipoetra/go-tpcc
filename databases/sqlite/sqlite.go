@@ -1,11 +1,10 @@
-package postgresql
+package sqlite
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"github.com/Percona-Lab/go-tpcc/tpcc/models"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	_ "github.com/mattn/go-sqlite3"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,36 +13,31 @@ import (
 
 type PostgreSQL struct {
 	transactions bool
-	Client *pgx.Conn
+	Client *sql.DB
 	fk bool
 	preparedStatements bool
-	tx pgx.Tx
+	tx *sql.Tx
 	isTx bool
 }
 
 
-func NewPostgreSQL(uri string, dbname string, transactions bool) (*PostgreSQL, error) {
-	conn, err := pgx.Connect(context.Background(), uri)
+func NewSqlite(uri string, dbname string, transactions bool) (*PostgreSQL, error) {
+
+	db, err := sql.Open("sqlite3", "./foo.db")
 	if err != nil {
 		return nil, err
 	}
-
-	err = conn.Ping(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
+	
 	return &PostgreSQL{
 		transactions: transactions,
-		Client: conn,
+		Client: db,
 		fk: true,
 		preparedStatements: false,
 	}, nil
-
 }
 
 func (db *PostgreSQL) StartTrx() error {
-	tx, err := db.Client.Begin(context.Background())
+	tx, err := db.Client.Begin()
 	if err != nil {
 		return err
 	}
@@ -53,11 +47,11 @@ func (db *PostgreSQL) StartTrx() error {
 }
 
 func (db *PostgreSQL) CommitTrx() error {
-	return db.tx.Commit(context.Background())
+	return db.tx.Commit()
 }
 
 func (db *PostgreSQL) RollbackTrx() error {
-	return db.tx.Rollback(context.Background())
+	return db.tx.Rollback()
 }
 
 func (db *PostgreSQL) transformQuery(query string, args ...interface{}) (string, []interface{}) {
@@ -82,37 +76,36 @@ func (db *PostgreSQL) transformQuery(query string, args ...interface{}) (string,
 	return query, args
 }
 
-func (db *PostgreSQL) query(query string, args ...interface{}) (pgx.Rows, error){
+func (db *PostgreSQL) query(query string, args ...interface{}) (*sql.Rows, error){
 
 	query, args = db.transformQuery(query,args...)
 
 	if db.transactions && db.isTx {
-		return db.tx.Query(context.Background(), query, args...)
+		return db.tx.Query(query, args...)
 	}
 
-	return db.Client.Query(context.Background(), query, args...)
+	return db.Client.Query(query, args...)
 }
 
-func (db *PostgreSQL) queryRow(query string, args ...interface{}) pgx.Row {
+func (db *PostgreSQL) queryRow(query string, args ...interface{}) *sql.Row {
 
 	query, args = db.transformQuery(query,args...)
 
 	if db.transactions && db.isTx {
-		return db.tx.QueryRow(context.Background(), query, args...)
+		return db.tx.QueryRow(query, args...)
 	}
 
-	return db.Client.QueryRow(context.Background(), query, args...)
+	return db.Client.QueryRow(query, args...)
 }
-
-func (db *PostgreSQL) exec(query string, args ...interface{}) (pgconn.CommandTag, error){
+func (db *PostgreSQL) exec(query string, args ...interface{}) (sql.Result, error){
 
 	query, args = db.transformQuery(query,args...)
 
 	if db.transactions && db.isTx {
-		return db.tx.Exec(context.Background(), query, args...)
+		return db.tx.Exec(query, args...)
 	}
 
-	return db.Client.Exec(context.Background(), query, args...)
+	return db.Client.Exec(query, args...)
 }
 
 func (db *PostgreSQL) InsertOne(tableName string, d interface{}) error {
@@ -136,7 +129,7 @@ func (db *PostgreSQL) InsertOne(tableName string, d interface{}) error {
 	if db.preparedStatements {
 
 		query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", tableName, f, strings.Repeat(",?", len(fields))[1:])
-		_, err := db.Client.Exec(context.Background(), query, values...)
+		_, err := db.Client.Exec(query, values...)
 		return err
 	}
 
@@ -158,7 +151,6 @@ func (db *PostgreSQL) InsertOne(tableName string, d interface{}) error {
 	}
 
 	_,err := db.Client.Exec(
-		context.Background(),
 		fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", tableName, f, strings.Join(values_, ",")),
 	)
 	if err != nil {
@@ -187,8 +179,9 @@ func (db *PostgreSQL) IncrementDistrictOrderId(warehouseId int, districtId int) 
 	if err != nil {
 		return err
 	}
+	n, _ := r.RowsAffected()
 
-	if r.RowsAffected() == 0 {
+	if n == 0 {
 		return fmt.Errorf("unable to match district")
 	}
 
@@ -223,8 +216,8 @@ func (db *PostgreSQL) DeleteNewOrder(orderId int, warehouseId int, districtId in
 	if err != nil {
 		return err
 	}
-
-	if r.RowsAffected() == 0 {
+	n, _ := r.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("unable to match new order for delete")
 	}
 
@@ -299,7 +292,8 @@ func (db *PostgreSQL) UpdateOrders(orderId int, warehouseId int, districtId int,
 		return err
 	}
 
-	if r.RowsAffected() == 0 {
+	n, _ := r.RowsAffected()
+	if n == 0 {
 		fmt.Errorf("unable to match customer")
 	}
 
@@ -332,7 +326,8 @@ func (db *PostgreSQL) UpdateCustomer(customerId int, warehouseId int, districtId
 		return err
 	}
 
-	if res.RowsAffected() == 0 {
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("unable to match customer")
 	}
 
@@ -488,7 +483,8 @@ func (db *PostgreSQL) UpdateWarehouseBalance(warehouseId int, amount float64) er
 		return err
 	}
 
-	if r.RowsAffected() == 0 {
+	n, _ := r.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("unable to match warehouse")
 	}
 
@@ -536,7 +532,8 @@ func (db *PostgreSQL) UpdateDistrictBalance(warehouseId int, districtId int, amo
 		return err
 	}
 
-	if r.RowsAffected() == 0 {
+	n, _ := r.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("Unable to match district")
 	}
 
@@ -558,7 +555,7 @@ func (db *PostgreSQL) InsertHistory(warehouseId int, districtId int, date time.T
 
 func (db *PostgreSQL) UpdateCredit(customerId int, warehouseId int, districtId int, balance float64, data string) error {
 	var err error
-	var res pgconn.CommandTag
+	var res sql.Result
 
 	if len(data) > 0 {
 		res, err = db.exec("UPDATE CUSTOMER SET " +
@@ -589,7 +586,8 @@ func (db *PostgreSQL) UpdateCredit(customerId int, warehouseId int, districtId i
 		return err
 	}
 
-	if res.RowsAffected() == 0 {
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("no customers matched")
 	}
 
@@ -669,7 +667,8 @@ func (db *PostgreSQL) UpdateStock(stockId int, warehouseId int, quantity int, yt
 		return err
 	}
 
-	if r.RowsAffected() == 0 {
+	n, _ := r.RowsAffected()
+	if n == 0 {
 		return fmt.Errorf("unable to match stock")
 	}
 
@@ -752,4 +751,3 @@ func (db *PostgreSQL) GetStockInfo(
 	}
 	return &stocks, nil
 }
-

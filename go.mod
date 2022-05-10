@@ -2,8 +2,7 @@ module github.com/Percona-Lab/go-tpcc
 
 require (
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/jackc/pgconn v1.7.0
-	github.com/jackc/pgx/v4 v4.9.0
+	github.com/mattn/go-sqlite3 v1.14.12
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.1

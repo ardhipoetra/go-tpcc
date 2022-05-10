@@ -3,7 +3,7 @@ package databases
 import (
 	"github.com/Percona-Lab/go-tpcc/databases/mongodb"
 	"github.com/Percona-Lab/go-tpcc/databases/mysql"
-	"github.com/Percona-Lab/go-tpcc/databases/postgresql"
+	"github.com/Percona-Lab/go-tpcc/databases/sqlite"
 	"github.com/Percona-Lab/go-tpcc/tpcc/models"
 	"time"
 )
@@ -45,14 +45,14 @@ type Database interface {
 func NewDatabase(driver, uri, dbname, username, password string, transactions bool, findandmodify bool) (Database, error) {
 	var d Database
 	var err error
-	
+
 	switch driver {
 	case "mongodb":
 		d, err = mongodb.NewMongoDb(uri, dbname, transactions, findandmodify)
 	case "mysql":
 		d, err = mysql.NewMySQL(uri, dbname, transactions)
-	case "postgresql":
-		d, err = postgresql.NewPostgreSQL(uri, dbname, transactions)
+	case "sqlite":
+		d, err = sqlite.NewSqlite(uri, dbname, transactions)
 	default:
 		panic("Unknown database driver")
 	}

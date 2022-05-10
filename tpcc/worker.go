@@ -6,7 +6,6 @@ import (
 	"github.com/Percona-Lab/go-tpcc/executor"
 	"github.com/Percona-Lab/go-tpcc/helpers"
 	"sync"
-	"fmt"
 	"time"
 )
 
