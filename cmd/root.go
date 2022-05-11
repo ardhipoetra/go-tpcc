@@ -33,6 +33,12 @@ func init() {
 	rootCmd.PersistentFlags().String("db", "", "database name to use")
 	rootCmd.PersistentFlags().String("dbdriver", "mysql", "db driver to use (mongodb|mysql)")
 	rootCmd.PersistentFlags().Bool("trx", false, "use trx?. false by default")
+
+	prepareCmd.Root().PersistentFlags().String("leader", "localhost:9991", "address of the (supposed to be) leader, format ip:port")
+	prepareCmd.Root().PersistentFlags().StringSlice("voter", []string{"localhost:9999"}, "address of the (supposed to be) voter, format ip:port (repeat-able)")
+	
+	prepareCmd.Root().MarkFlagRequired("leader")
+	prepareCmd.Root().MarkFlagRequired("voter")
 }
 
 // initConfig reads in config file and ENV variables if set.

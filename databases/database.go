@@ -3,7 +3,6 @@ package databases
 import (
 	"github.com/Percona-Lab/go-tpcc/databases/mongodb"
 	"github.com/Percona-Lab/go-tpcc/databases/mysql"
-	"github.com/Percona-Lab/go-tpcc/databases/sqlite"
 	"github.com/Percona-Lab/go-tpcc/tpcc/models"
 	"time"
 )
@@ -52,7 +51,7 @@ func NewDatabase(driver, uri, dbname, username, password string, transactions bo
 	case "mysql":
 		d, err = mysql.NewMySQL(uri, dbname, transactions)
 	case "sqlite":
-		d, err = sqlite.NewSqlite(uri, dbname, transactions)
+		return nil,nil
 	default:
 		panic("Unknown database driver")
 	}

@@ -1,6 +1,7 @@
 module github.com/Percona-Lab/go-tpcc
 
 require (
+	github.com/ardhipoetra/go-dqlite v1.8.4
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/mattn/go-sqlite3 v1.14.12
 	github.com/mitchellh/go-homedir v1.1.0

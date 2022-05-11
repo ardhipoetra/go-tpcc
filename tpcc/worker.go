@@ -3,6 +3,7 @@ package tpcc
 import (
 	"context"
 	"github.com/Percona-Lab/go-tpcc/databases"
+	"github.com/Percona-Lab/go-tpcc/databases/sqlite"
 	"github.com/Percona-Lab/go-tpcc/executor"
 	"github.com/Percona-Lab/go-tpcc/helpers"
 	"sync"
@@ -21,6 +22,9 @@ type Configuration struct {
 	WareHouses int
 	ScaleFactor float64
 	PercentFail int
+
+	Leader string
+	Voter []string
 }
 
 
@@ -51,7 +55,16 @@ func NewWorker(ctx context.Context, configuration *Configuration, wg *sync.WaitG
 		den = true
 	}
 
-	d, err := databases.NewDatabase(configuration.DBDriver, configuration.URI, configuration.DBName, "a", "b", configuration.Transactions, false)
+	var err error
+	var d databases.Database
+
+	if configuration.DBDriver == "sqlite" {			
+		d, err = sqlite.NewSqlite(configuration.URI, configuration.DBName, 
+			configuration.Transactions, configuration.Leader, configuration.Voter)
+	} else {
+		d, err = databases.NewDatabase(configuration.DBDriver, configuration.URI, configuration.DBName, "a", "b", configuration.Transactions, false)
+	}
+
 	if err != nil {
 		return nil, err
 	}

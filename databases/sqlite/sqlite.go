@@ -4,11 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/Percona-Lab/go-tpcc/tpcc/models"
+	"github.com/ardhipoetra/go-dqlite/client"
+	"github.com/ardhipoetra/go-dqlite/driver"
+	"github.com/ardhipoetra/go-dqlite/protocol"
 	_ "github.com/mattn/go-sqlite3"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+	"context"
 )
 
 type SQLite struct {
@@ -20,15 +24,74 @@ type SQLite struct {
 	isTx bool
 }
 
+var leader_cli *client.Client
+var voter_cli []*client.Client
 
-func NewSqlite(uri string, dbname string, transactions bool) (*SQLite, error) {
+var leadercli *client.Client
 
-	compl_uri := fmt.Sprintf("file:%s.db?%s", dbname, uri)
-	db, err := sql.Open("sqlite3", compl_uri)
+func connectClients(leaderu string, voteru []string) {
+	// connect each client with dqlite instance
+	leader_cli, _ = client.New(context.Background(), leaderu)
+	for i, v := range voteru {
+		fmt.Printf("Voter %d %v\n", i, v)
+		voter_cli[i], _ = client.New(context.Background(), v)
+	}
+}
+
+func setupCluster(leaderu string, voteru []string) protocol.NodeStore {
+	// set the inmemnodestore to refer the cluster
+	store := client.NewInmemNodeStore()
+	store.Set(context.Background(), []client.NodeInfo{{Address: leaderu}})
+
+	fmt.Printf("Find leader...")
+	leadercli, _ := client.FindLeader(context.Background(), store, []client.Option{client.WithDialFunc(client.DefaultDialFunc)}...)
+	fmt.Printf("Leader is: %s", leadercli)
+
+	for i, v := range voteru {
+		// prepare node 2 and 3 to be added to the leader
+		// the leader by default has ID = 1 or BootstrapID (some hardcoded value)
+		client_voter := client.NodeInfo{ID: uint64(i)+uint64(2), Address: v, Role: client.Voter}
+
+		// add node2
+		fmt.Printf("(%d) Add Client %s ...", client_voter.ID, client_voter)
+		err := leadercli.Add(context.Background(), client_voter)
+		if err != nil {
+			fmt.Errorf("Cannot add node %s %s\n", client_voter, err)
+		}
+	}
+	return store
+}
+
+
+
+func NewSqlite(uri string, dbname string, transactions bool,
+	leaderu string, voteru []string) (*SQLite, error) {
+
+	voter_cli = make([]*client.Client, len(voteru))
+	connectClients(leaderu, voteru)
+	store := setupCluster(leaderu, voteru)
+	driver, _ := driver.New(store)
+
+	dvs := sql.Drivers()
+	found := false
+	for _, a := range dvs {
+        if a == "dqlite" {
+            found = true
+        }
+    }
+
+	if !found {
+		sql.Register("dqlite", driver)
+	}
+
+	db, err := sql.Open("dqlite", "dqlite_tpcc")
+	db.SetMaxOpenConns(1)
 
 	if err != nil {
 		return nil, err
 	}
+
+	printCluster()
 
 	return &SQLite{
 		transactions: transactions,
@@ -752,4 +815,48 @@ func (db *SQLite) GetStockInfo(
 
 	}
 	return &stocks, nil
+}
+
+func printCluster() {
+	var leader_ni *protocol.NodeInfo
+	var err error
+	var servers []protocol.NodeInfo
+
+	fmt.Println("Printing cluster..")
+
+	if leader_cli != nil {
+		fmt.Println("From Leader:")
+		leader_ni, err = leader_cli.Leader(context.Background())
+		if err == nil {
+			fmt.Println(leader_ni.ID, " at ", leader_ni.Address)
+		}
+
+		servers, err = leader_cli.Cluster(context.Background())
+		if err == nil {
+			for _, ni := range servers {
+				fmt.Printf("%s--%s,", ni.Address, ni.Role)
+			}
+		} else {
+			fmt.Println("Error in leader node")
+		}
+		fmt.Println("\n-----------------")
+	}
+
+	for i, v := range voter_cli {
+		fmt.Printf("(%d) From Node %s:", i, v)
+		leader_ni, err = v.Leader(context.Background())
+		if err == nil {
+			fmt.Println("My leader is : ", leader_ni.ID, " at ", leader_ni.Address)
+		}
+	
+		servers, err = v.Cluster(context.Background())
+		if err == nil {
+			for _, ni := range servers {
+				fmt.Printf("%s--%s,", ni.Address, ni.Role)
+			}
+		} else {
+			fmt.Println("Error in node ", i, " at ", v)
+		}
+		fmt.Println("\n-----------------")
+	}
 }

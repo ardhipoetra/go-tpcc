@@ -23,6 +23,9 @@ var prepareCmd = &cobra.Command{
 		uri, _ := cmd.Root().PersistentFlags().GetString("uri")
 		trx,_ := cmd.Root().PersistentFlags().GetBool("trx")
 
+		leader, _ := cmd.Root().PersistentFlags().GetString("leader")
+		voter,_ := cmd.Root().PersistentFlags().GetStringSlice("voter")
+
 		wj := make(chan int, warehouses)
 		wr := make(chan int, warehouses)
 
@@ -45,6 +48,9 @@ var prepareCmd = &cobra.Command{
 			ScaleFactor:    scalefactor,
 			URI: uri,
 			Transactions: trx,
+
+			Leader: leader,
+			Voter:	voter,
 		}
 
 		ddl, err := tpcc.NewWorker(context.Background(), &c, nil, nil, 0)
