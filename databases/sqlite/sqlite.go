@@ -23,7 +23,9 @@ type SQLite struct {
 
 func NewSqlite(uri string, dbname string, transactions bool) (*SQLite, error) {
 
-	db, err := sql.Open("sqlite3", "./foo.db")
+	compl_uri := fmt.Sprintf("file:%s.db?%s", dbname, uri)
+	db, err := sql.Open("sqlite3", compl_uri)
+
 	if err != nil {
 		return nil, err
 	}
