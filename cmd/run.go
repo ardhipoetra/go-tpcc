@@ -31,6 +31,8 @@ var runCmd = &cobra.Command{
 		percfail, _ := cmd.PersistentFlags().GetInt("percent-fail")
 		dbdriver, _ := cmd.Root().PersistentFlags().GetString("dbdriver")
 
+		leader, _ := cmd.Root().PersistentFlags().GetString("leader")
+		voter,_ := cmd.Root().PersistentFlags().GetStringSlice("voter")
 
 		if perc > 100 || perc < 0 {
 			panic("percentile not correct")
@@ -70,6 +72,9 @@ var runCmd = &cobra.Command{
 					URI: uri,
 					Transactions: trx,
 					PercentFail: percfail,
+
+					Leader: leader,
+					Voter:	voter,
 				}
 
 				w, err := tpcc.NewWorker(ctx, &conf, wg, c, i)

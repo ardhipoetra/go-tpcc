@@ -611,7 +611,6 @@ func (db *SQLite) InsertHistory(warehouseId int, districtId int, date time.Time,
 	_,err := db.exec(query, 1, districtId, warehouseId, warehouseId, districtId, date, amount, data)
 	if err != nil {
 		fmt.Println(db.transformQuery(query, 1, districtId, warehouseId, warehouseId, districtId, date, amount, data))
-		panic("aa")
 		return err
 	}
 
